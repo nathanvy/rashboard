@@ -1,3 +1,5 @@
 # Rashboard - Rails Dashboard
 
-This is a rails app that presents a trading dashboard for algorithmic trading applications.
+I'm 110% certain this name probably already exists, if not in the Rails ecosystem then certainly in Rust, but it's groovy so I'm keeping it despite the collision.
+
+This is a Rails-based dashboard to display certain performance stats from my algorithmic trading application.
