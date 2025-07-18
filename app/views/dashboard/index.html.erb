@@ -1,0 +1,78 @@
+<h1>Zalgo</h1>
+
+<h2>Intraday Equity Curve</h2>
+<div class="equity-curve">
+  <%= image_tag '/equitycurve.png', alt: 'Intraday Equity Curve', class: 'equity-chart' %>
+</div>
+
+<h2>Transactions</h2>
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <% if @trades.any? %>
+          <% @trades.first.attributes.keys.each do |col| %>
+            <th><%= col.titleize %></th>
+          <% end %>
+        <% else %>
+          <th>No transactions available</th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @trades.each do |trade| %>
+        <tr>
+          <% trade.attributes.values.each do |val| %>
+            <td><%= val %></td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<h2>Completed Trades</h2>
+<div class="table-container">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Strike</th>
+        <th>Expiry</th>
+        <th>Qty</th>
+        <th>Open Time</th>
+        <th>Close Time</th>
+        <th>Open Price</th>
+        <th>Close Price</th>
+        <th>Total P&L</th>
+        <th>&Delta; P&L</th>
+        <th>&Theta; P&L</th>
+        <th>V P&L</th>
+        <th>&Gamma; P&L</th>
+        <th>Residual</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @completed.each do |c| %>
+        <tr>
+          <td><%= c[:symbol] %></td>
+          <td><%= c[:strike] %></td>
+          <td><%= l(c[:expiry], format: :short) %></td>
+          <td><%= c[:qty] %></td>
+          <td><%= l(c[:open_dtg], format: :short) %></td>
+          <td><%= l(c[:close_dtg], format: :short) %></td>
+          <td><%= number_with_precision(c[:open_price], precision: 2) %></td>
+          <td><%= number_with_precision(c[:close_price], precision: 2) %></td>
+          <td class="<%= c[:dPnL] >= 0 ? 'pl-positive' : 'pl-negative' %>">
+            <%= number_with_precision(c[:dPnL], precision: 2) %>
+          </td>
+          <td><%= number_with_precision(c[:deltaPL], precision: 2) %></td>
+          <td><%= number_with_precision(c[:thetaPL], precision: 2) %></td>
+          <td><%= number_with_precision(c[:vegaPL], precision: 2) %></td>
+          <td><%= number_with_precision(c[:gammaPL], precision: 2) %></td>
+          <td><%= number_with_precision(c[:residual], precision: 2) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
