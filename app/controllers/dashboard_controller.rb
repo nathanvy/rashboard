@@ -1,79 +1,97 @@
+# app/controllers/dashboard_controller.rb
 class DashboardController < ApplicationController
-  require "open3" # for shell
   def index
-    @trades = Trade.order(:dtg)
-    @completed = match_trades(@trades)
-    @completed.each do |c|
-      c.merge!(decompose_pnl(c))
+    @trades    = Trade.order(:dtg)
+    matched = match_trades(@trades)
+
+    matched.each do |trade|
+      breakdown = decompose_pnl(trade)
+      trade.merge!(breakdown)
     end
+
+    @completed = matched.sort_by { |c| c[:strike] }
     @intraday = compute_intraday_curve(@completed)
-    # dump_dat_and_plot(@intraday)
   end
 
   private
 
   def match_trades(trades)
-    opens = Hash.new { |h, k| h[k] = [] }
+    opens     = Hash.new { |h, k| h[k] = [] }
     completed = []
 
     trades.each do |t|
-      key = [ t.symbol, t.strike, t.expiry, t.qty, t.symbol.include?("Call") ? "CALL" : "PUT" ].join("|")
-      if t.effect.upcase == "OPEN"
+      right = t.symbol.include?("Call") ? "CALL" : "PUT"
+      key   = [ t.symbol, t.strike, t.expiry.to_s, t.qty, right ].join("|")
+      effect = t.effect.to_s.downcase
+
+      if effect.include?("open")
         opens[key] << t
-      else
-        o = opens[key].shift
-        pl = (t.price - o.price) * o.qty
-        completed << o.attributes.symbolize_keys.merge(
-          close_dtg:   t.dtg,
-          close_price: t.price,
-          pl:          pl,
-          open_dtg:    o.dtg,
-          open_price:  o.price,
-          open_spot:   o.spot,
-          close_spot:  t.spot,
-          open_iv:     o.iv,
-          close_iv:    t.iv,
-          delta:       o.delta,
-          theta:       o.theta,
-          gamma:       o.gamma,
-          vega:        o.vega
-        )
+      elsif effect.include?("close")
+        if open_t = opens[key].shift
+          completed << {
+            symbol:       t.symbol,
+            strike:       t.strike,
+            expiry:       t.expiry,
+            qty:          open_t.qty,
+            open_dtg:     open_t.dtg,
+            close_dtg:    t.dtg,
+            open_price:   open_t.price,
+            close_price:  t.price,
+            open_spot:    open_t.spot,
+            close_spot:   t.spot,
+            open_iv:      open_t.iv,
+            close_iv:     t.iv,
+            delta:        open_t.delta,
+            theta:        open_t.theta,
+            gamma:        open_t.gamma,
+            vega:         open_t.vega,
+            pl:           (t.price - open_t.price) * open_t.qty
+          }
+        end
       end
     end
 
     completed
   end
 
-  def decompose_pnl(tr)
-    d_pnl   = tr[:pl]
-    d_spot  = tr[:close_spot] - tr[:open_spot]
-    dt_days = (tr[:close_dtg] - tr[:open_dtg]) / 1.day.to_i
-    d_sigma = tr[:close_iv] - tr[:open_iv]
+  def decompose_pnl(trade)
+    pl      = trade[:pl]
+    d_spot  = trade[:close_spot] - trade[:open_spot]
+    dt_days = (trade[:close_dtg] - trade[:open_dtg]) / 1.day.to_f
+    d_sigma = trade[:close_iv] - trade[:open_iv]
 
-    delta_pl = tr[:delta] * d_spot * tr[:qty]
-    theta_pl = tr[:theta] * dt_days  * tr[:qty]
-    vega_pl  = tr[:vega]  * d_sigma * tr[:qty]
-    gamma_pl = 0.5 * tr[:gamma] * d_spot**2 * tr[:qty]
-    residual = d_pnl - (delta_pl + theta_pl + vega_pl + gamma_pl)
+    delta_pl = trade[:delta] * d_spot * trade[:qty]
+    theta_pl = trade[:theta] * dt_days * trade[:qty]
+    vega_pl  = trade[:vega]  * d_sigma * trade[:qty]
+    gamma_pl = 0.5 * trade[:gamma] * (d_spot**2) * trade[:qty]
+    residual = pl - (delta_pl + theta_pl + vega_pl + gamma_pl)
 
-    { dPnL: d_pnl, deltaPL: delta_pl, thetaPL: theta_pl, vegaPL: vega_pl, gammaPL: gamma_pl, residual: residual }
+    {
+      dPnL:      pl,
+      deltaPL:  delta_pl,
+      thetaPL:  theta_pl,
+      vegaPL:   vega_pl,
+      gammaPL:  gamma_pl,
+      residual: residual
+    }
   end
 
   def compute_intraday_curve(completed)
-    cum = 0.0
-    today = Time.zone.today
-    completed.each_with_object([]) do |c, arr|
-      if c[:close_dtg].to_date == today
-        cum += c[:dPnL]
-        arr << [ c[:close_dtg].to_i, cum ]
-      end
+    today        = Time.zone.today
+    start_of_day = Time.zone.now.beginning_of_day.to_i * 1_000
+    cum          = 0.0
+    points       = [[ start_of_day, cum ]]
+    
+    completed
+      .sort_by { |c| c[:close_dtg] }
+      .each do |c|
+      next unless c[:close_dtg].to_date == today
+      
+      cum += c[:dPnL].to_f
+      
+      points << [ c[:close_dtg].to_i * 1_000, cum ]
     end
-  end
-
-  def dump_dat_and_plot(data)
-    dat = Rails.root.join("public", "intraday_equity.dat")
-    png = Rails.root.join("public", "intraday_equity.png")
-    File.write(dat, data.map { |ts, v| "#{ts} #{v}" }.join("\n"))
-    system("gnuplot #{Rails.root.join('intraday_equity.plt')}")
+    
+    points
   end
 end
