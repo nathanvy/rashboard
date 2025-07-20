@@ -2,8 +2,55 @@
   <h1>Zalgo Performance</h1>
 
 <div class="equity-curve">
-  <%= image_tag '/equitycurve.png', alt: 'Intraday Equity Curve', class: 'equity-chart' %>
+  <canvas id="equityChart" height="100"></canvas>
 </div>
+
+<%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chart.js" %>
+<%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns" %>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const equityData = <%= raw @equity_series.to_json %>;
+    const chartPoints = equityData.map(([t, pnl]) => ({ x: t, y: pnl }));
+    const ctx = document.getElementById("equityChart").getContext("2d");
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        datasets: [{
+          label: "Realized P&L",
+          data: chartPoints,
+          fill: false,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: "time",
+            time: {
+              unit: "minute",
+              tooltipFormat: "MMM d, yyyy HH:mm"
+            },
+            title: { display: true, text: "Time" }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: "Cumulative P&L" }
+          }
+        },
+        plugins: {
+          legend: { display: true },
+          tooltip: { mode: "index", intersect: false }
+        },
+        elements: {
+          point: { radius: 0 }  // hide the dots for a smoother line
+        },
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  });
+</script>
 
 <h2>Transactions</h2>
 <div class="table-container">
