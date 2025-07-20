@@ -11,6 +11,27 @@ class DashboardController < ApplicationController
 
     @completed = matched.sort_by { |c| c[:strike] }
     @intraday = compute_intraday_curve(@completed)
+
+    @completed_columns = %i[
+      symbol strike qty
+      open_price close_price
+      dPnL deltaPL thetaPL vegaPL gammaPL residual
+      ]
+
+  @completed_column_labels = {
+    symbol:      "Symbol",
+    strike:      "Strike",
+    expiry:      "Expiry",
+    qty:         "Qty",
+    open_price:  "Entry Px",
+    close_price: "Exit Px",
+    dPnL:        "Total P&L",
+    deltaPL:     "Δ P&L",
+    thetaPL:     "Θ P&L",
+    vegaPL:      "V P&L",
+    gammaPL:     "Γ P&L",
+    residual:    "Residual"
+  }
   end
 
   private

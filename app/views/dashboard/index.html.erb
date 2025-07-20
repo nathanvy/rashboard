@@ -36,41 +36,26 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Symbol</th>
-        <th>Strike</th>
-        <th>Expiry</th>
-        <th>Qty</th>
-        <th>Open Time</th>
-        <th>Close Time</th>
-        <th>Open Price</th>
-        <th>Close Price</th>
-        <th>Total P&L</th>
-        <th>&Delta; P&L</th>
-        <th>&Theta; P&L</th>
-        <th>V P&L</th>
-        <th>&Gamma; P&L</th>
-        <th>Residual</th>
+        <% @completed_columns.each do |col| %>
+        <th><%= @completed_column_labels[col].html_safe %></th>
+        <% end %>
       </tr>
     </thead>
     <tbody>
       <% @completed.each do |c| %>
         <tr>
-          <td><%= c[:symbol] %></td>
-          <td><%= c[:strike] %></td>
-          <td><%= l(c[:expiry], format: :short) %></td>
-          <td><%= c[:qty] %></td>
-          <td><%= l(c[:open_dtg], format: :short) %></td>
-          <td><%= l(c[:close_dtg], format: :short) %></td>
-          <td><%= number_with_precision(c[:open_price], precision: 2) %></td>
-          <td><%= number_with_precision(c[:close_price], precision: 2) %></td>
-          <td class="<%= c[:dPnL] >= 0 ? 'pl-positive' : 'pl-negative' %>">
-            <%= number_with_precision(c[:dPnL], precision: 2) %>
+          <% @completed_columns.each do |col| %>
+          <td>
+            <% value = c[col] %>
+            <% case col
+               when :expiry then concat l(value, format: :short)
+               when :open_price, :close_price, :dPnL, :deltaPL, :thetaPL, :vegaPL, :gammaPL, :residual
+               then concat number_with_precision(value, precision: 2)
+               else
+               concat value
+               end %>
           </td>
-          <td><%= number_with_precision(c[:deltaPL], precision: 2) %></td>
-          <td><%= number_with_precision(c[:thetaPL], precision: 2) %></td>
-          <td><%= number_with_precision(c[:vegaPL], precision: 2) %></td>
-          <td><%= number_with_precision(c[:gammaPL], precision: 2) %></td>
-          <td><%= number_with_precision(c[:residual], precision: 2) %></td>
+          <% end %>
         </tr>
       <% end %>
     </tbody>
