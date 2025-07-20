@@ -12,26 +12,28 @@ class DashboardController < ApplicationController
     @completed = matched.sort_by { |c| c[:strike] }
     @intraday = compute_intraday_curve(@completed)
 
+    @equity_series = compute_intraday_curve(@completed)
+    
     @completed_columns = %i[
       symbol strike qty
       open_price close_price
       dPnL deltaPL thetaPL vegaPL gammaPL residual
       ]
 
-  @completed_column_labels = {
-    symbol:      "Symbol",
-    strike:      "Strike",
-    expiry:      "Expiry",
-    qty:         "Qty",
-    open_price:  "Entry Px",
-    close_price: "Exit Px",
-    dPnL:        "Total P&L",
-    deltaPL:     "Δ P&L",
-    thetaPL:     "Θ P&L",
-    vegaPL:      "V P&L",
-    gammaPL:     "Γ P&L",
-    residual:    "Residual"
-  }
+    @completed_column_labels = {
+      symbol:      "Symbol",
+      strike:      "Strike",
+      expiry:      "Expiry",
+      qty:         "Qty",
+      open_price:  "Entry Px",
+      close_price: "Exit Px",
+      dPnL:        "Total P&L",
+      deltaPL:     "Δ P&L",
+      thetaPL:     "Θ P&L",
+      vegaPL:      "V P&L",
+      gammaPL:     "Γ P&L",
+      residual:    "Residual"
+    }
   end
 
   private
@@ -99,20 +101,18 @@ class DashboardController < ApplicationController
 
   def compute_intraday_curve(completed)
     today        = Time.zone.today
-    start_of_day = Time.zone.now.beginning_of_day.to_i * 1_000
+    start_of_day = Time.zone.now.beginning_of_day.to_i * 1_000 # js expects milliseconds since epoch
     cum          = 0.0
-    points       = [[ start_of_day, cum ]]
-    
+    points       = [ [ start_of_day, cum ] ]
+
     completed
       .sort_by { |c| c[:close_dtg] }
       .each do |c|
       next unless c[:close_dtg].to_date == today
-      
       cum += c[:dPnL].to_f
-      
       points << [ c[:close_dtg].to_i * 1_000, cum ]
     end
-    
+
     points
   end
 end
