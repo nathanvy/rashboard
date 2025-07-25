@@ -6,8 +6,8 @@ This is a Rails-based dashboard to display certain performance stats from my alg
 
 ## Getting started
 
-#+begin_src 
+```bash
 $ git clone
 $ docker compose build
 $ RAILS_MASTER_KEY=$(cat config/credentials/production.key) docker compose up -d
-#+end_src
+```
