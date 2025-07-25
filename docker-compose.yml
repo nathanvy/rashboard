@@ -1,9 +1,8 @@
 services:
-  web:
-    build: .
-    network_mode: host
-    environment:
-      - DATABASE_URL= postgresql://username:password@127.0.0.1:5432/databasename
-      - RAILS_MASTER_KEY
-    ports:
-      - "3000:80"
+        web:
+        build: .
+        container_name: "rashboard"
+        network_mode: host
+        environment:
+              - DATABASE_URL= postgresql://username:password@127.0.0.1:5432/databasename
+              - RAILS_MASTER_KEY
