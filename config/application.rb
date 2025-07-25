@@ -24,5 +24,9 @@ module Rashboard
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # disable websockets
+    config.action_cable.mount_path = nil
+    config.action_cable.url        = nil
   end
 end
