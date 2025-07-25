@@ -1,95 +1,172 @@
 <div class="dashboard">
   <h1>Zalgo Performance</h1>
 
-<div class="equity-curve">
-  <canvas id="equityChart" height="100"></canvas>
-</div>
+  <div class="charts-container">
+    <div class="equity-curve chart-item">
+      <canvas id="equityChart"></canvas>
+    </div>
 
-<%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chart.js" %>
-<%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns" %>
+    <div class="histogram-container chart-item">
+      <canvas id="returnHistogram"></canvas>
+    </div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    const equityData = <%= raw @equity_series.to_json %>;
-    const chartPoints = equityData.map(([t, pnl]) => ({ x: t, y: pnl }));
-    const ctx = document.getElementById("equityChart").getContext("2d");
-    new Chart(ctx, {
-      type: "line",
-      data: {
-        datasets: [{
-          label: "Realized P&L",
-          data: chartPoints,
-          fill: false,
-          borderWidth: 2,
-        }]
-      },
-      options: {
-        scales: {
-          x: {
-            type: "time",
-            time: {
-              unit: "minute",
-              tooltipFormat: "MMM d, yyyy HH:mm"
-            },
-            title: { display: true, text: "Time" }
-          },
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: "Cumulative P&L" }
-          }
-        },
-        plugins: {
-          legend: { display: true },
-          tooltip: { mode: "index", intersect: false }
-        },
-        elements: {
-          point: { radius: 0 }  // hide the dots for a smoother line
-        },
-        responsive: true,
-        maintainAspectRatio: false
-      }
-    });
-  });
-</script>
-
-<h2>Transactions</h2>
-<div class="table-container">
-  <table class="table">
-    <thead>
-      <tr>
-        <% if @trades.any? %>
-          <% @trades.first.attributes.keys.each do |col| %>
-            <th><%= col.titleize %></th>
+    <div class="chart-item histogram-legend">
+      <table class="legend-table">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Daily Return Range</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @return_histogram[:labels].each_with_index do |range, idx| %>
+          <% letter = ("A".ord + idx).chr %>
+          <tr>
+            <td><strong><%= letter %></strong></td>
+            <td><%= range %></td>
+          </tr>
           <% end %>
-        <% else %>
-          <th>No transactions available</th>
-        <% end %>
-      </tr>
-    </thead>
-    <tbody>
-      <% @trades.each do |trade| %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chart.js" %>
+  <%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns" %>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const equityData = <%= raw @equity_series.to_json %>;
+        const chartPoints = equityData.map(([t, pnl]) => ({ x: t, y: pnl }));
+        const ctx = document.getElementById("equityChart").getContext("2d");
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                datasets: [{
+                    label: "Realized P&L",
+                    data: chartPoints,
+                    fill: false,
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: "time",
+                        time: {
+                            unit: "hour",
+                            tooltipFormat: "MMM d, yyyy HH:mm"
+                        },
+                        title: { display: true, text: "Time" }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: "Cum. P&L ($)" }
+                    }
+                },
+                plugins: {
+                    title: { display: true, text: "Intraday Equity Run" },
+                    legend: { display: false },
+                    tooltip: { mode: "index", intersect: false }
+                },
+                elements: {
+                    point: { radius: 0 }  // hide the dots for a smoother line
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    });
+  </script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const { labels: ranges, counts } = <%= raw @return_histogram.to_json %>;
+
+        // generate letters A, B, … up to the number of ranges
+        const letters = ranges.map((_, i) => String.fromCharCode(65 + i));
+
+        const ctx = document.getElementById("returnHistogram").getContext("2d");
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: letters,     // use letters here
+                datasets: [{
+                    label: "Trades by Return (%)",
+                    data: counts,
+                    backgroundColor: "rgba(54, 162, 235, 0.5)",
+                    borderColor:     "rgba(54, 162, 235, 1)",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: "Class" } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: "Frequency Distribution" }
+                    }
+                },
+                plugins: {
+                    title: { display: true, text: "Returns by Class" },
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            // tooltip shows letter + count + range
+                            label: context => {
+                                const letter = context.label;
+                                const count  = context.parsed.y;
+                                const range  = ranges[context.dataIndex];
+                                return `${letter}: ${count} trades (${range})`;
+                            }
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    });
+  </script>
+
+  <h2>Transactions</h2>
+  <div class="table-container">
+    <table class="table">
+      <thead>
         <tr>
-          <% trade.attributes.values.each do |val| %>
-            <td><%= val %></td>
+          <% if @trades.any? %>
+          <% @trades.first.attributes.keys.each do |col| %>
+          <th><%= col.titleize %></th>
+          <% end %>
+          <% else %>
+          <th>No transactions available</th>
           <% end %>
         </tr>
-      <% end %>
-    </tbody>
-  </table>
-</div>
-
-<h2>Completed Trades</h2>
-<div class="table-container">
-  <table class="table">
-    <thead>
-      <tr>
-        <% @completed_columns.each do |col| %>
-        <th><%= @completed_column_labels[col].html_safe %></th>
+      </thead>
+      <tbody>
+        <% @trades.each do |trade| %>
+        <tr>
+          <% trade.attributes.values.each do |val| %>
+          <td><%= val %></td>
+          <% end %>
+        </tr>
         <% end %>
-      </tr>
-    </thead>
-    <tbody>
-      <% @completed.each do |c| %>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Completed Trades</h2>
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <% @completed_columns.each do |col| %>
+          <th><%= @completed_column_labels[col].html_safe %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @completed.each do |c| %>
         <tr>
           <% @completed_columns.each do |col| %>
           <td>
@@ -104,8 +181,8 @@
           </td>
           <% end %>
         </tr>
-      <% end %>
-    </tbody>
-  </table>
-</div>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
 </div>
