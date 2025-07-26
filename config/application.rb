@@ -1,6 +1,16 @@
 require_relative "boot"
 
-require "rails/all"
+# require "rails/all"
+require "rails"                     # core
+require "active_model/railtie"      # validations, serializers
+require "active_record/railtie"     # ORM
+# require "active_job/railtie"        # background jobs
+require "action_controller/railtie" # controllers, routing
+# require "action_mailer/railtie"     # mailers
+require "action_view/railtie"       # view rendering
+# require "action_cable/engine"       # WebSockets
+require "sprockets/railtie"         # asset pipeline (Sprockets)
+require "rails/test_unit/railtie"   # built‑in test framework
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
