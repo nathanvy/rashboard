@@ -61,3 +61,5 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+
+gem "sprockets-rails"               # the Railtie that provides sprockets/railtie
