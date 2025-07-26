@@ -9,8 +9,8 @@ require "action_controller/railtie" # controllers, routing
 # require "action_mailer/railtie"     # mailers
 require "action_view/railtie"       # view rendering
 # require "action_cable/engine"       # WebSockets
-require "sprockets/railtie"         # asset pipeline (Sprockets)
-require "rails/test_unit/railtie"   # built‑in test framework
+require "propshaft/engine"         # asset pipeline
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
